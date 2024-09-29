@@ -1,0 +1,64 @@
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# Java package files
+*.jar
+*.war
+*.ear
+
+# Eclipse project files
+.classpath
+.project
+.settings/
+bin/
+target/
+
+# IntelliJ IDEA files
+*.iml
+.idea/
+out/
+
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+
+# Gradle
+.gradle/
+build/
+
+# JUnit
+junit-*.jar
+test-*.jar
+
+# NetBeans
+nbproject/private/
+build/
+dist/
+
+# Miscellaneous files
+.DS_Store
+*.swp
+*.lock
+*.tmp
+*.bak
+*.orig
+
+# Other IDEs
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Coverage files
+coverage/
+*.cov
+
+# Other temporary files
+*.tmp
+*.temp
+*.orig
+*.log
+

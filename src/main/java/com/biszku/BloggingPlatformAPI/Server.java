@@ -1,5 +1,6 @@
 package com.biszku.BloggingPlatformAPI;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.hibernate.Session;
@@ -9,11 +10,11 @@ import org.hibernate.cfg.Configuration;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.List;
 
 public class Server {
 
     public static void main(String[] args) {
-
         ObjectMapper objectMapper = new ObjectMapper();
 
         try {
@@ -31,18 +32,19 @@ public class Server {
                     String response = "";
                     try {
                         String data = new String(exchange.getRequestBody().readAllBytes());
-                        Post user = objectMapper.readValue(data, Post.class);
+                        PostToSave postFields = objectMapper.readValue(data, PostToSave.class);
 
-                        String title = user.getTitle();
-                        String content = user.getContent();
-                        String category = user.getCategory();
+                        String title = postFields.title();
+                        String content = postFields.content();
+                        String category = postFields.category();
 
                         Post post = new Post(title, content, category);
                         session.save(post);
                         transaction.commit();
 
-                        response = "{\"message\": \"Post created successfully\"}";
-                        exchange.sendResponseHeaders(201, response.getBytes().length);
+                        String responseJson = objectMapper.writeValueAsString(post);
+                        response = responseJson;
+                        exchange.sendResponseHeaders(201, responseJson.getBytes().length);
                     } catch (Exception e) {
                         if (transaction != null) {
                             transaction.rollback();
@@ -57,8 +59,13 @@ public class Server {
                 }
 
                 if (requestMethod.equals("GET")) {
+                    Session session = HibernateUtil.getSessionFactory().openSession();
+                    session.beginTransaction();
+                    List<Post> posts = session.createQuery("SELECT p FROM Post p", Post.class).list();
+                    session.getTransaction().commit();
 
-                    String response = "{\"message\": \"User retrieved successfully\"}";
+                    String response = objectMapper.writeValueAsString(posts);
+
                     exchange.sendResponseHeaders(200, response.getBytes().length);
                     exchange.getResponseBody().write(response.getBytes());
                     exchange.close();

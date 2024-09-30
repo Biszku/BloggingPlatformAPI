@@ -17,7 +17,8 @@ public class Client {
             HttpClient client = HttpClient.newHttpClient();
             PostToSave user = new PostToSave("My first post",
                     "This is my first post",
-                    "Technology");
+                    "Technology",
+                    new String[]{"Java", "Spring"});
 
             String jsonString = objectMapper.writeValueAsString(user);
 

@@ -1,6 +1,5 @@
 package com.biszku.BloggingPlatformAPI;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.hibernate.Session;
@@ -37,8 +36,12 @@ public class Server {
                         String title = postFields.title();
                         String content = postFields.content();
                         String category = postFields.category();
+                        String[] tags = postFields.tags();
 
                         Post post = new Post(title, content, category);
+                        for (String tag : tags) {
+
+                        }
                         session.save(post);
                         transaction.commit();
 
@@ -49,8 +52,8 @@ public class Server {
                         if (transaction != null) {
                             transaction.rollback();
                         }
-                        response = "{\"message\": \"Error occured while creating post\"}";
-                        exchange.sendResponseHeaders(500, response.getBytes().length);
+                        response = "{\"message\": \"Incorrect \"}";
+                        exchange.sendResponseHeaders(400, response.getBytes().length);
                     } finally {
                         session.close();
                     }
@@ -60,13 +63,24 @@ public class Server {
 
                 if (requestMethod.equals("GET")) {
                     Session session = HibernateUtil.getSessionFactory().openSession();
-                    session.beginTransaction();
-                    List<Post> posts = session.createQuery("SELECT p FROM Post p", Post.class).list();
-                    session.getTransaction().commit();
+                    Transaction transaction = session.beginTransaction();
 
-                    String response = objectMapper.writeValueAsString(posts);
+                    String response = "";
+                    try {
 
-                    exchange.sendResponseHeaders(200, response.getBytes().length);
+                        List<Post> posts = session.createQuery("FROM Post", Post.class).list();
+                        transaction.commit();
+                        response = objectMapper.writeValueAsString(posts);
+                        exchange.sendResponseHeaders(201, response.getBytes().length);
+                    } catch (Exception e) {
+                        if (transaction != null) {
+                            transaction.rollback();
+                        }
+                        response = "{\"message\": \"Error occured while creating post\"}";
+                        exchange.sendResponseHeaders(204, response.getBytes().length);
+                    } finally {
+                        session.close();
+                    }
                     exchange.getResponseBody().write(response.getBytes());
                     exchange.close();
                 }

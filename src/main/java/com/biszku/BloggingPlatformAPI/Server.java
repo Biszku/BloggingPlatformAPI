@@ -36,18 +36,14 @@ public class Server {
                         String title = postFields.title();
                         String content = postFields.content();
                         String category = postFields.category();
-                        String[] tags = postFields.tags();
+                        List<String> tags = List.of(postFields.tags());
 
-                        Post post = new Post(title, content, category);
-                        for (String tag : tags) {
-
-                        }
-                        session.save(post);
+                        Post post = new Post(title, content, category, tags);
+                        session.persist(post);
                         transaction.commit();
 
-                        String responseJson = objectMapper.writeValueAsString(post);
-                        response = responseJson;
-                        exchange.sendResponseHeaders(201, responseJson.getBytes().length);
+                        response = objectMapper.writeValueAsString(post);
+                        exchange.sendResponseHeaders(201, response.getBytes().length);
                     } catch (Exception e) {
                         if (transaction != null) {
                             transaction.rollback();
@@ -59,17 +55,16 @@ public class Server {
                     }
                     exchange.getResponseBody().write(response.getBytes());
                     exchange.close();
-                }
-
-                if (requestMethod.equals("GET")) {
+                } else if (requestMethod.equals("GET")) {
                     Session session = HibernateUtil.getSessionFactory().openSession();
                     Transaction transaction = session.beginTransaction();
+                    String path = exchange.getRequestURI().getPath();
 
                     String response = "";
                     try {
-
-                        List<Post> posts = session.createQuery("FROM Post", Post.class).list();
+                        List<Post> posts = session.createQuery("FROM Post", Post.class).getResultList();
                         transaction.commit();
+
                         response = objectMapper.writeValueAsString(posts);
                         exchange.sendResponseHeaders(201, response.getBytes().length);
                     } catch (Exception e) {

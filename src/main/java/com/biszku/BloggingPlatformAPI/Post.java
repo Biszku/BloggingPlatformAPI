@@ -1,8 +1,13 @@
 package com.biszku.BloggingPlatformAPI;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 
-import java.time.LocalDate;
+import java.io.IOException;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Entity
 @Table(name = "posts")
@@ -21,30 +26,36 @@ public class Post {
     @Column(name = "category")
     private String category;
 
-    @Column(name = "created")
+    @Convert(converter = JpaConverterJson.class)
+    private List<String> tags;
+
+    @Column(name = "created_at", updatable = false)
     private String createdAt;
 
-    @Column(name = "updated")
+    @Column(name = "updated_at")
     private String updatedAt;
 
     public Post() {
     }
 
-    public Post(String title, String content, String category) {
+    public Post(String title, String content, String category, List<String> tags) {
         this.title = title;
         this.content = content;
         this.category = category;
-        this.createdAt = LocalDate.now().toString();
-        this.updatedAt = LocalDate.now().toString();
+        this.tags = tags;
     }
 
-    public Post(Long id, String title, String content, String category, String createdAt, String updatedAt) {
-        this.id = id;
-        this.title = title;
-        this.content = content;
-        this.category = category;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
+    @PrePersist
+    protected void onCreate() {
+        ZonedDateTime zonedDateTime = ZonedDateTime.now().withZoneSameInstant(java.time.ZoneOffset.UTC);
+        createdAt = zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+        updatedAt = zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        ZonedDateTime zonedDateTime = ZonedDateTime.now().withZoneSameInstant(java.time.ZoneOffset.UTC);
+        updatedAt = zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
     }
 
     public Long getId() {
@@ -79,6 +90,14 @@ public class Post {
         this.category = category;
     }
 
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
+    }
+
     public String getCreatedAt() {
         return createdAt;
     }
@@ -94,4 +113,29 @@ public class Post {
     public void setUpdatedAt(String updatedAt) {
         this.updatedAt = updatedAt;
     }
+}
+
+@Converter(autoApply = true)
+class JpaConverterJson implements AttributeConverter<Object, String> {
+
+    private final static ObjectMapper objectMapper = new ObjectMapper();
+
+    @Override
+    public String convertToDatabaseColumn(Object meta) {
+        try {
+            return objectMapper.writeValueAsString(meta);
+        } catch (JsonProcessingException ex) {
+            return null;
+        }
+    }
+
+    @Override
+    public Object convertToEntityAttribute(String dbData) {
+        try {
+            return objectMapper.readValue(dbData, Object.class);
+        } catch (IOException ex) {
+            return null;
+        }
+    }
+
 }

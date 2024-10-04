@@ -1,10 +1,7 @@
 package com.biszku.BloggingPlatformAPI;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-
-import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -15,7 +12,7 @@ public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer postId;
 
     @Column(name = "title")
     private String title;
@@ -26,8 +23,9 @@ public class Post {
     @Column(name = "category")
     private String category;
 
-    @Convert(converter = JpaConverterJson.class)
-    private List<String> tags;
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<Tag> tags;
 
     @Column(name = "created_at", updatable = false)
     private String createdAt;
@@ -38,11 +36,10 @@ public class Post {
     public Post() {
     }
 
-    public Post(String title, String content, String category, List<String> tags) {
+    public Post(String title, String content, String category) {
         this.title = title;
         this.content = content;
         this.category = category;
-        this.tags = tags;
     }
 
     @PrePersist
@@ -58,12 +55,12 @@ public class Post {
         updatedAt = zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
     }
 
-    public Long getId() {
-        return id;
+    public Integer getPostId() {
+        return postId;
     }
 
-    public void setId(Long id) {
-        this.id = id;
+    public void setPostId(Integer postId) {
+        this.postId = postId;
     }
 
     public String getTitle() {
@@ -90,11 +87,11 @@ public class Post {
         this.category = category;
     }
 
-    public List<String> getTags() {
+    public List<Tag> getTags() {
         return tags;
     }
 
-    public void setTags(List<String> tags) {
+    public void setTags(List<Tag> tags) {
         this.tags = tags;
     }
 
@@ -113,29 +110,4 @@ public class Post {
     public void setUpdatedAt(String updatedAt) {
         this.updatedAt = updatedAt;
     }
-}
-
-@Converter(autoApply = true)
-class JpaConverterJson implements AttributeConverter<Object, String> {
-
-    private final static ObjectMapper objectMapper = new ObjectMapper();
-
-    @Override
-    public String convertToDatabaseColumn(Object meta) {
-        try {
-            return objectMapper.writeValueAsString(meta);
-        } catch (JsonProcessingException ex) {
-            return null;
-        }
-    }
-
-    @Override
-    public Object convertToEntityAttribute(String dbData) {
-        try {
-            return objectMapper.readValue(dbData, Object.class);
-        } catch (IOException ex) {
-            return null;
-        }
-    }
-
 }

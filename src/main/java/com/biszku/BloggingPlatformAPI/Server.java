@@ -9,6 +9,7 @@ import org.hibernate.cfg.Configuration;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.List;
 
 public class Server {
@@ -36,13 +37,18 @@ public class Server {
                         String title = postFields.title();
                         String content = postFields.content();
                         String category = postFields.category();
-                        List<String> tags = List.of(postFields.tags());
 
-                        Post post = new Post(title, content, category, tags);
+                        Post post = new Post(title, content, category);
+
+                        List<Tag> tags = Arrays.stream(postFields.tags()).map(tag -> new Tag(tag, post)).toList();
+                        post.setTags(tags);
+
                         session.persist(post);
                         transaction.commit();
 
-                        response = objectMapper.writeValueAsString(post);
+                        String jsonResult = objectMapper.writeValueAsString(post);
+                        System.out.println(jsonResult);
+                        response = jsonResult;
                         exchange.sendResponseHeaders(201, response.getBytes().length);
                     } catch (Exception e) {
                         if (transaction != null) {

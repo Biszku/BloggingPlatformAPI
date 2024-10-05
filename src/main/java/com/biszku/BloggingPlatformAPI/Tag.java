@@ -10,6 +10,7 @@ public class Tag {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "TagID")
     private int id;
 
     @Column(name = "Val")
@@ -23,9 +24,8 @@ public class Tag {
     public Tag() {
     }
 
-    public Tag(String val, Post post) {
+    public Tag(String val) {
         this.val = val;
-        this.post = post;
     }
 
     public int getId() {

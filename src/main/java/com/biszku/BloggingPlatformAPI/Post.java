@@ -2,6 +2,7 @@ package com.biszku.BloggingPlatformAPI;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -12,6 +13,7 @@ public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private Integer postId;
 
     @Column(name = "title")
@@ -91,8 +93,15 @@ public class Post {
         return tags;
     }
 
+    public void removeAlTags() {
+        tags.clear();
+    }
+
     public void setTags(List<Tag> tags) {
         this.tags = tags;
+        for (Tag tag : tags) {
+            tag.setPost(this);
+        }
     }
 
     public String getCreatedAt() {

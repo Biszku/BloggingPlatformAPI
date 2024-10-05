@@ -1,5 +1,6 @@
 package com.biszku.BloggingPlatformAPI;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import org.hibernate.Session;
@@ -13,42 +14,42 @@ import java.util.Arrays;
 import java.util.List;
 
 public class Server {
+    private HttpServer server;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
 
     public static void main(String[] args) {
-        ObjectMapper objectMapper = new ObjectMapper();
+        new Server().start();
+    }
 
-        try {
+    private void start() {
+        server = creationOfServer();
+        createServerEndPoints();
 
-            HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+        server.setExecutor(null);
+        server.start();
 
-            server.createContext("/posts", exchange -> {
-                String requestMethod = exchange.getRequestMethod();
+        System.out.println("Server is listening on port 8080...");
+    }
 
-                if (requestMethod.equals("POST")) {
+    private void createServerEndPoints() {
+        server.createContext("/posts", exchange -> {
+            String requestMethod = exchange.getRequestMethod();
+            Session session = HibernateUtil.getSessionFactory().openSession();
 
-                    Session session = HibernateUtil.getSessionFactory().openSession();
+            switch (requestMethod) {
+                case "POST" -> {
                     Transaction transaction = session.beginTransaction();
-
                     String response = "";
+
                     try {
                         String data = new String(exchange.getRequestBody().readAllBytes());
-                        PostToSave postFields = objectMapper.readValue(data, PostToSave.class);
-
-                        String title = postFields.title();
-                        String content = postFields.content();
-                        String category = postFields.category();
-
-                        Post post = new Post(title, content, category);
-
-                        List<Tag> tags = Arrays.stream(postFields.tags()).map(tag -> new Tag(tag, post)).toList();
-                        post.setTags(tags);
+                        Post post = creationOfPost(data);
 
                         session.persist(post);
                         transaction.commit();
 
-                        String jsonResult = objectMapper.writeValueAsString(post);
-                        System.out.println(jsonResult);
-                        response = jsonResult;
+                        response = objectMapper.writeValueAsString(post);
                         exchange.sendResponseHeaders(201, response.getBytes().length);
                     } catch (Exception e) {
                         if (transaction != null) {
@@ -61,14 +62,13 @@ public class Server {
                     }
                     exchange.getResponseBody().write(response.getBytes());
                     exchange.close();
-                } else if (requestMethod.equals("GET")) {
-                    Session session = HibernateUtil.getSessionFactory().openSession();
+                }
+                case "GET" -> {
                     Transaction transaction = session.beginTransaction();
-                    String path = exchange.getRequestURI().getPath();
 
                     String response = "";
                     try {
-                        List<Post> posts = session.createQuery("FROM Post", Post.class).getResultList();
+                        List<Post> posts = session.createQuery("SELECT p FROM Post p", Post.class).getResultList();
                         transaction.commit();
 
                         response = objectMapper.writeValueAsString(posts);
@@ -85,20 +85,47 @@ public class Server {
                     exchange.getResponseBody().write(response.getBytes());
                     exchange.close();
                 }
-            });
+            }
+        });
+    }
 
-            server.setExecutor(null);
-            server.start();
+    private Post creationOfPost(String data) {
+        try {
+            return createPost(data);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-            System.out.println("Server is listening on port 8080...");
+    private Post createPost(String data) throws JsonProcessingException {
+            PostToSave postFields = objectMapper.readValue(data, PostToSave.class);
+
+            String title = postFields.title();
+            String content = postFields.content();
+            String category = postFields.category();
+
+            Post post = new Post(title, content, category);
+
+            List<Tag> tags = Arrays.stream(postFields.tags()).map(Tag::new).toList();
+            post.setTags(tags);
+            return post;
+    }
+
+    private HttpServer creationOfServer() {
+        try {
+            return createServer();
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
+
+    private HttpServer createServer() throws IOException {
+        return HttpServer.create(new InetSocketAddress(8080), 0);
+    }
 }
 
 class HibernateUtil {
-    private static SessionFactory sessionFactory;
+    private static final SessionFactory sessionFactory;
 
     static {
         sessionFactory = new Configuration().configure().buildSessionFactory();

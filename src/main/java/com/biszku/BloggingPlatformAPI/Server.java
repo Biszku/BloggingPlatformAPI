@@ -33,15 +33,15 @@ public class Server {
     }
 
     private void createServerEndPoints() {
+
         server.createContext("/posts", exchange -> {
             String requestMethod = exchange.getRequestMethod();
             Session session = HibernateUtil.getSessionFactory().openSession();
+            Transaction transaction = session.beginTransaction();
+            String response = "";
 
             switch (requestMethod) {
                 case "POST" -> {
-                    Transaction transaction = session.beginTransaction();
-                    String response = "";
-
                     try {
                         String data = new String(exchange.getRequestBody().readAllBytes());
                         Post post = creationOfPost(data);
@@ -57,16 +57,9 @@ public class Server {
                         }
                         response = "{\"message\": \"Incorrect \"}";
                         exchange.sendResponseHeaders(400, response.getBytes().length);
-                    } finally {
-                        session.close();
                     }
-                    exchange.getResponseBody().write(response.getBytes());
-                    exchange.close();
                 }
                 case "GET" -> {
-                    Transaction transaction = session.beginTransaction();
-
-                    String response = "";
                     try {
                         List<Post> posts = session.createQuery("SELECT p FROM Post p", Post.class).getResultList();
                         transaction.commit();
@@ -78,14 +71,44 @@ public class Server {
                             transaction.rollback();
                         }
                         response = "{\"message\": \"Error occured while creating post\"}";
-                        exchange.sendResponseHeaders(204, response.getBytes().length);
-                    } finally {
-                        session.close();
+                        exchange.sendResponseHeaders(404, response.getBytes().length);
                     }
-                    exchange.getResponseBody().write(response.getBytes());
-                    exchange.close();
+                }
+                case "PUT" -> {
+                    String id = exchange.getRequestURI().toString().split("/")[2];
+
+                    if (id == null) {
+                        response = "{\"message\": \"Incorrect \"}";
+                        exchange.sendResponseHeaders(400, response.getBytes().length);
+                        break;
+                    }
+
+                    try {
+                        String data = new String(exchange.getRequestBody().readAllBytes());
+                        PostToSave postFields = objectMapper.readValue(data, PostToSave.class);
+                        Post post = session.get(Post.class, Integer.parseInt(id));
+
+                        post.setTitle(postFields.title());
+                        post.setContent(postFields.content());
+                        post.setCategory(postFields.category());
+
+                        session.merge(post);
+                        transaction.commit();
+
+                        response = objectMapper.writeValueAsString(post);
+                        exchange.sendResponseHeaders(201, response.getBytes().length);
+                    } catch (Exception e) {
+                        if (transaction != null) {
+                            transaction.rollback();
+                        }
+                        response = "{\"message\": \"Error occured while updating post\"}";
+                        exchange.sendResponseHeaders(404, response.getBytes().length);
+                    }
                 }
             }
+            session.close();
+            exchange.getResponseBody().write(response.getBytes());
+            exchange.close();
         });
     }
 

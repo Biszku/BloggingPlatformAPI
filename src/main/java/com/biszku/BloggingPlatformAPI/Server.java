@@ -37,12 +37,12 @@ public class Server {
             String requestMethod = exchange.getRequestMethod();
             Session session = HibernateUtil.getSessionFactory().openSession();
             Transaction transaction = session.beginTransaction();
+            String data = new String(exchange.getRequestBody().readAllBytes());
             String response = "";
 
             switch (requestMethod) {
                 case "POST" -> {
                     try {
-                        String data = new String(exchange.getRequestBody().readAllBytes());
                         Post post = creationOfPost(data);
 
                         session.persist(post);
@@ -60,7 +60,6 @@ public class Server {
                     }
                 }
                 case "GET" -> {
-
                     try {
                         List<Post> posts = session.createQuery("SELECT p FROM Post p", Post.class).getResultList();
 
@@ -86,9 +85,7 @@ public class Server {
                     }
 
                     try {
-                        String data = new String(exchange.getRequestBody().readAllBytes());
                         Post post = session.get(Post.class, Integer.parseInt(id));
-
                         Post updatedPost = updatePost(post, data);
 
                         session.merge(updatedPost);
@@ -101,6 +98,31 @@ public class Server {
                             transaction.rollback();
                         }
                         response = "{\"message\": \"Error occured while updating post\"}";
+                        exchange.sendResponseHeaders(404, response.getBytes().length);
+                    }
+                }
+                case "DELETE" -> {
+                    String id = exchange.getRequestURI().toString().split("/")[2];
+
+                    if (id == null) {
+                        response = "{\"message\": \"Incorrect \"}";
+                        exchange.sendResponseHeaders(400, response.getBytes().length);
+                        break;
+                    }
+
+                    try {
+                        Post post = session.get(Post.class, Integer.parseInt(id));
+
+                        session.remove(post);
+                        transaction.commit();
+
+                        response = objectMapper.writeValueAsString(post);
+                        exchange.sendResponseHeaders(201, response.getBytes().length);
+                    } catch (Exception e) {
+                        if (transaction != null) {
+                            transaction.rollback();
+                        }
+                        response = "{\"message\": \"Error occured while deleting post\"}";
                         exchange.sendResponseHeaders(404, response.getBytes().length);
                     }
                 }

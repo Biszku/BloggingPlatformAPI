@@ -16,8 +16,8 @@ public class Tag {
     @Column(name = "Val")
     private String val;
 
-    @ManyToOne
-    @JoinColumn(name = "postId", nullable = false)
+    @ManyToOne (cascade = CascadeType.ALL)
+    @JoinColumn(name = "PostID")
     @JsonBackReference
     private Post post;
 

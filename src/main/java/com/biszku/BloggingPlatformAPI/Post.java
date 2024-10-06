@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -13,8 +14,7 @@ public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id")
-    private Integer postId;
+    private Integer id;
 
     @Column(name = "title")
     private String title;
@@ -25,11 +25,13 @@ public class Post {
     @Column(name = "category")
     private String category;
 
-    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "post",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true)
     @JsonManagedReference
-    private List<Tag> tags;
+    private List<Tag> tags = new ArrayList<>();
 
-    @Column(name = "created_at", updatable = false)
+    @Column(name = "created_at")
     private String createdAt;
 
     @Column(name = "updated_at")
@@ -57,12 +59,12 @@ public class Post {
         updatedAt = zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
     }
 
-    public Integer getPostId() {
-        return postId;
+    public Integer getId() {
+        return id;
     }
 
-    public void setPostId(Integer postId) {
-        this.postId = postId;
+    public void setId(Integer id) {
+        this.id = id;
     }
 
     public String getTitle() {
@@ -89,21 +91,6 @@ public class Post {
         this.category = category;
     }
 
-    public List<Tag> getTags() {
-        return tags;
-    }
-
-    public void removeAlTags() {
-        tags.clear();
-    }
-
-    public void setTags(List<Tag> tags) {
-        this.tags = tags;
-        for (Tag tag : tags) {
-            tag.setPost(this);
-        }
-    }
-
     public String getCreatedAt() {
         return createdAt;
     }
@@ -118,5 +105,13 @@ public class Post {
 
     public void setUpdatedAt(String updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public List<Tag> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<Tag> tags) {
+        this.tags = tags;
     }
 }

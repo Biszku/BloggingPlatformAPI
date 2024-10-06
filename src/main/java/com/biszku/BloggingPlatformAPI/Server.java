@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Server {
     private HttpServer server;
@@ -85,14 +86,11 @@ public class Server {
 
                     try {
                         String data = new String(exchange.getRequestBody().readAllBytes());
-                        PostToSave postFields = objectMapper.readValue(data, PostToSave.class);
                         Post post = session.get(Post.class, Integer.parseInt(id));
 
-                        post.setTitle(postFields.title());
-                        post.setContent(postFields.content());
-                        post.setCategory(postFields.category());
+                        Post updatedPost = updatePost(post, data);
 
-                        session.merge(post);
+                        session.merge(updatedPost);
                         transaction.commit();
 
                         response = objectMapper.writeValueAsString(post);
@@ -129,9 +127,25 @@ public class Server {
 
             Post post = new Post(title, content, category);
 
-            List<Tag> tags = Arrays.stream(postFields.tags()).map(Tag::new).toList();
+            List<Tag> tags = Arrays.stream(postFields.tags())
+                    .map(tag -> {
+                        Tag t = new Tag(tag);
+                        t.setPost(post);
+                        return t;
+                    })
+                    .toList();
             post.setTags(tags);
             return post;
+    }
+
+    private Post updatePost(Post post, String data) throws JsonProcessingException {
+        PostToSave postFields = objectMapper.readValue(data, PostToSave.class);
+
+        post.setTitle(postFields.title());
+        post.setContent(postFields.content());
+        post.setCategory(postFields.category());
+
+        return post;
     }
 
     private HttpServer creationOfServer() {

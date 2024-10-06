@@ -10,7 +10,6 @@ import org.hibernate.cfg.Configuration;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Arrays;
 import java.util.List;
 
 public class Server {
@@ -50,6 +49,7 @@ public class Server {
                         transaction.commit();
 
                         response = objectMapper.writeValueAsString(post);
+
                         exchange.sendResponseHeaders(201, response.getBytes().length);
                     } catch (Exception e) {
                         if (transaction != null) {
@@ -62,11 +62,11 @@ public class Server {
                 case "GET" -> {
 
                     try {
-
                         List<Post> posts = session.createQuery("SELECT p FROM Post p", Post.class).getResultList();
-                        transaction.commit();
 
+                        transaction.commit();
                         response = objectMapper.writeValueAsString(posts);
+
                         exchange.sendResponseHeaders(201, response.getBytes().length);
                     } catch (Exception e) {
                         if (transaction != null) {
@@ -120,23 +120,14 @@ public class Server {
     }
 
     private Post createPost(String data) throws JsonProcessingException {
-            PostToSave postFields = objectMapper.readValue(data, PostToSave.class);
+        PostToSave postFields = objectMapper.readValue(data, PostToSave.class);
 
-            String title = postFields.title();
-            String content = postFields.content();
-            String category = postFields.category();
+        String title = postFields.title();
+        String content = postFields.content();
+        String category = postFields.category();
+        List<String> tags = List.of(postFields.tags());
 
-            Post post = new Post(title, content, category);
-
-            List<Tag> tags = Arrays.stream(postFields.tags())
-                    .map(tag -> {
-                        Tag t = new Tag(tag);
-                        t.setPost(post);
-                        return t;
-                    })
-                    .toList();
-            post.setTags(tags);
-            return post;
+        return new Post(title, content, category, tags);
     }
 
     private Post updatePost(Post post, String data) throws JsonProcessingException {
@@ -145,6 +136,7 @@ public class Server {
         post.setTitle(postFields.title());
         post.setContent(postFields.content());
         post.setCategory(postFields.category());
+        post.setTags(List.of(postFields.tags()));
 
         return post;
     }

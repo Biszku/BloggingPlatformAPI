@@ -9,6 +9,5 @@
         <property name="show_sql">true</property>
 
         <mapping class="com.biszku.BloggingPlatformAPI.Post"/>
-        <mapping class="com.biszku.BloggingPlatformAPI.Tag"/>
     </session-factory>
 </hibernate-configuration>

@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Server {
     private HttpServer server;
@@ -61,7 +60,9 @@ public class Server {
                     }
                 }
                 case "GET" -> {
+
                     try {
+
                         List<Post> posts = session.createQuery("SELECT p FROM Post p", Post.class).getResultList();
                         transaction.commit();
 

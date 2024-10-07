@@ -10,7 +10,10 @@ import org.hibernate.cfg.Configuration;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Server {
     private HttpServer server;
@@ -40,6 +43,9 @@ public class Server {
             String data = new String(exchange.getRequestBody().readAllBytes());
             String response = "";
 
+            URI requestURI = exchange.getRequestURI();
+            Map<String, String> queryParams = getQueryParams(requestURI.getQuery());
+
             switch (requestMethod) {
                 case "POST" -> {
                     try {
@@ -55,32 +61,17 @@ public class Server {
                         if (transaction != null) {
                             transaction.rollback();
                         }
-                        response = "{\"message\": \"Incorrect \"}";
+                        PostErrorResponse postErrorResponse = new PostErrorResponse(400,
+                                "Invalid body data");
+                        response = objectMapper.writeValueAsString(postErrorResponse);
                         exchange.sendResponseHeaders(400, response.getBytes().length);
-                    }
-                }
-                case "GET" -> {
-                    try {
-                        List<Post> posts = session.createQuery("SELECT p FROM Post p", Post.class).getResultList();
-
-                        transaction.commit();
-                        response = objectMapper.writeValueAsString(posts);
-
-                        exchange.sendResponseHeaders(201, response.getBytes().length);
-                    } catch (Exception e) {
-                        if (transaction != null) {
-                            transaction.rollback();
-                        }
-                        response = "{\"message\": \"Error occured while creating post\"}";
-                        exchange.sendResponseHeaders(404, response.getBytes().length);
                     }
                 }
                 case "PUT" -> {
                     String id = exchange.getRequestURI().toString().split("/")[2];
 
                     if (id == null) {
-                        response = "{\"message\": \"Incorrect \"}";
-                        exchange.sendResponseHeaders(400, response.getBytes().length);
+                        exchange.sendResponseHeaders(404, -1);
                         break;
                     }
 
@@ -92,23 +83,19 @@ public class Server {
                         transaction.commit();
 
                         response = objectMapper.writeValueAsString(post);
-                        exchange.sendResponseHeaders(201, response.getBytes().length);
+                        exchange.sendResponseHeaders(200, response.getBytes().length);
                     } catch (Exception e) {
                         if (transaction != null) {
                             transaction.rollback();
                         }
-                        response = "{\"message\": \"Error occured while updating post\"}";
-                        exchange.sendResponseHeaders(404, response.getBytes().length);
+                        PostErrorResponse postErrorResponse = new PostErrorResponse(400,
+                                "Invalid body data");
+                        response = objectMapper.writeValueAsString(postErrorResponse);
+                        exchange.sendResponseHeaders(400, response.getBytes().length);
                     }
                 }
                 case "DELETE" -> {
                     String id = exchange.getRequestURI().toString().split("/")[2];
-
-                    if (id == null) {
-                        response = "{\"message\": \"Incorrect \"}";
-                        exchange.sendResponseHeaders(400, response.getBytes().length);
-                        break;
-                    }
 
                     try {
                         Post post = session.get(Post.class, Integer.parseInt(id));
@@ -116,14 +103,26 @@ public class Server {
                         session.remove(post);
                         transaction.commit();
 
-                        response = objectMapper.writeValueAsString(post);
-                        exchange.sendResponseHeaders(201, response.getBytes().length);
+                        exchange.sendResponseHeaders(204, -1);
                     } catch (Exception e) {
                         if (transaction != null) {
                             transaction.rollback();
                         }
-                        response = "{\"message\": \"Error occured while deleting post\"}";
-                        exchange.sendResponseHeaders(404, response.getBytes().length);
+                        exchange.sendResponseHeaders(404, -1);
+                    }
+                }
+                case "GET" -> {
+                    try {
+                        List<Post> posts = session.createQuery("SELECT p FROM Post p", Post.class).getResultList();
+                        transaction.commit();
+                        response = objectMapper.writeValueAsString(posts);
+
+                        exchange.sendResponseHeaders(200, response.getBytes().length);
+                    } catch (Exception e) {
+                        if (transaction != null) {
+                            transaction.rollback();
+                        }
+                        exchange.sendResponseHeaders(404, -1);
                     }
                 }
             }
@@ -173,6 +172,18 @@ public class Server {
 
     private HttpServer createServer() throws IOException {
         return HttpServer.create(new InetSocketAddress(8080), 0);
+    }
+
+    private Map<String, String> getQueryParams(String query) {
+        Map<String, String> queryParams = new HashMap<>();
+        if (query != null) {
+            String[] pairs = query.split("&");
+            for (String pair : pairs) {
+                String[] keyValue = pair.split("=");
+                queryParams.put(keyValue[0], keyValue.length > 1 ? keyValue[1] : "");
+            }
+        }
+        return queryParams;
     }
 }
 

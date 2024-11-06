@@ -1,6 +1,8 @@
 package com.biszku.BloggingPlatformAPI;
 
 import com.biszku.BloggingPlatformAPI.Entity.Post;
+import com.biszku.BloggingPlatformAPI.Entity.PostErrorResponse;
+import com.biszku.BloggingPlatformAPI.Entity.PostToSave;
 import com.biszku.BloggingPlatformAPI.Entity.Tag;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

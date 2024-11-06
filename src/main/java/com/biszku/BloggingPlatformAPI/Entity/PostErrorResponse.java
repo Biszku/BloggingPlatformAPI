@@ -1,4 +1,4 @@
-package com.biszku.BloggingPlatformAPI;
+package com.biszku.BloggingPlatformAPI.Entity;
 
 public class PostErrorResponse {
 

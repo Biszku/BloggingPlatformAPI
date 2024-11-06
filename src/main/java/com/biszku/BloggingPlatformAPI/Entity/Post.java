@@ -1,9 +1,11 @@
-package com.biszku.BloggingPlatformAPI;
+package com.biszku.BloggingPlatformAPI.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -12,35 +14,27 @@ public class Post {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
-
+    private Long id;
     @Column(name = "title")
     private String title;
-
     @Column(name = "content")
     private String content;
-
     @Column(name = "category")
     private String category;
-
-    @Column(name = "tags")
-    @Convert(converter = TagsConverter.class)
-    private List<String> tags;
-
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Tag> tags = new ArrayList<>();
     @Column(name = "created_at")
     private String createdAt;
-
     @Column(name = "updated_at")
     private String updatedAt;
 
     public Post() {
     }
 
-    public Post(String title, String content, String category, List<String> tags) {
+    public Post(String title, String content, String category) {
         this.title = title;
         this.content = content;
         this.category = category;
-        this.tags = tags;
     }
 
     @PrePersist
@@ -56,11 +50,11 @@ public class Post {
         updatedAt = zonedDateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'"));
     }
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -88,12 +82,19 @@ public class Post {
         this.category = category;
     }
 
-    public List<String> getTags() {
+    public List<Tag> getTags() {
         return tags;
     }
 
-    public void setTags(List<String> tags) {
+    public void setTags(List<Tag> tags) {
         this.tags = tags;
+    }
+
+    public void addTags(List<Tag> tags) {
+        for(Tag tag : tags) {
+            tag.setPost(this);
+            this.tags.add(tag);
+        }
     }
 
     public String getCreatedAt() {

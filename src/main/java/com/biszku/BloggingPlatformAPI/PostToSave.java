@@ -1,6 +1,5 @@
 package com.biszku.BloggingPlatformAPI;
 
-public record PostToSave(String title,
-                         String content,
-                         String category,
-                         String[] tags) {}
+import java.util.List;
+
+public record PostToSave(String title, String content, String category, List<String> tags) {}

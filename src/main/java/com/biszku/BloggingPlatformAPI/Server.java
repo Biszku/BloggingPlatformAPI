@@ -1,5 +1,7 @@
 package com.biszku.BloggingPlatformAPI;
 
+import com.biszku.BloggingPlatformAPI.Entity.Post;
+import com.biszku.BloggingPlatformAPI.Entity.Tag;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
@@ -14,6 +16,7 @@ import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Server {
     private HttpServer server;
@@ -52,10 +55,15 @@ public class Server {
                         Post post = creationOfPost(data);
 
                         session.persist(post);
+//                        session.merge(post);
+//                        session.flush();
                         transaction.commit();
 
-                        response = objectMapper.writeValueAsString(post);
-
+                        Post savedPost = session.get(Post.class, post.getId());
+                        System.out.println(savedPost.getId());
+                        System.out.println(savedPost.getTags().get(0).getTag());
+                        response = objectMapper.writeValueAsString(savedPost);
+                        System.out.println(response);
                         exchange.sendResponseHeaders(201, response.getBytes().length);
                     } catch (Exception e) {
                         if (transaction != null) {
@@ -141,14 +149,18 @@ public class Server {
     }
 
     private Post createPost(String data) throws JsonProcessingException {
+        System.out.println(data);
         PostToSave postFields = objectMapper.readValue(data, PostToSave.class);
 
         String title = postFields.title();
         String content = postFields.content();
         String category = postFields.category();
-        List<String> tags = List.of(postFields.tags());
+        List<Tag> tags = postFields.tags().stream().map(Tag::new).collect(Collectors.toList());
 
-        return new Post(title, content, category, tags);
+        Post post = new Post(title, content, category);
+        post.addTags(tags);
+
+        return post;
     }
 
     private Post updatePost(Post post, String data) throws JsonProcessingException {
@@ -157,7 +169,6 @@ public class Server {
         post.setTitle(postFields.title());
         post.setContent(postFields.content());
         post.setCategory(postFields.category());
-        post.setTags(List.of(postFields.tags()));
 
         return post;
     }
